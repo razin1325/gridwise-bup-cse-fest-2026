@@ -237,23 +237,31 @@ overall quality  : 1.000
 
 ## Docker fallback
 
+Registry reference (public):
+
+```
+toriqulhaque/gridwise-app:1.0.0
+toriqulhaque/gridwise-app@sha256:23fce654e3124a6d04cdb6bc92bd12c5501c7cd7ae4e599e1377889495b5458a
+```
+
 Multi-stage build (`Dockerfile`): dependencies → Next.js standalone build → minimal
-`node:22-alpine` runtime running as a non-root user. The image contains no `.env`
-and no API keys; configuration is supplied at run time.
+`node:22-alpine` runtime running as a non-root user. Exposed port is **3000** and the
+server binds to `0.0.0.0`. The image contains no `.env` and no API keys;
+configuration is supplied at run time.
 
 ```bash
 # build locally
 docker build -t gridwise-app:1.0.0 .
 
-# or pull the submitted image
-docker pull <your-dockerhub-username>/gridwise-app:1.0.0
+# or pull the submitted image (public, no login required)
+docker pull toriqulhaque/gridwise-app:1.0.0
 
 docker run -d --name gridwise \
   -p 3000:3000 \
   -e LLM_PROVIDER=nvidia \
   -e NVIDIA_API_KEY="<your-key>" \
   -e NVIDIA_MODEL=mistralai/mistral-nemotron \
-  gridwise-app:1.0.0
+  toriqulhaque/gridwise-app:1.0.0
 
 # wait for the HEALTHCHECK to report healthy, then:
 curl http://localhost:3000/health
