@@ -22,6 +22,12 @@ import {
   Info,
   Check,
   Award,
+  Clock,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  Filter,
+  Battery,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -49,6 +55,7 @@ export default function EnergyOptimizationDashboard() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [healthStatus, setHealthStatus] = useState<string>('checking');
   const [jsonOpen, setJsonOpen] = useState<boolean>(false);
+  const [tableFilter, setTableFilter] = useState<'all' | 'charge' | 'discharge' | 'idle'>('all');
 
   const currentCase = SAMPLE_CASES.find((c) => c.id === selectedCaseId);
 
@@ -444,52 +451,204 @@ export default function EnergyOptimizationDashboard() {
             </div>
 
             {/* 24-Hour Hourly Plan Table */}
-            <div className="glass-card p-3 sm:p-5 space-y-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0">
-                <div className="flex items-center space-x-2 text-xs sm:text-sm font-semibold text-slate-200">
-                  <Layers className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <span>24-Hour Optimized Energy Schedule Table</span>
-                </div>
-                <span className="text-xs text-slate-400">24 Hourly Intervals (0..23)</span>
-              </div>
+            {(() => {
+              let batteryCapacity = 220;
+              try {
+                const parsed = JSON.parse(jsonInput);
+                if (parsed?.battery?.capacity_kwh) batteryCapacity = parsed.battery.capacity_kwh;
+              } catch {}
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 font-medium bg-slate-900/60">
-                      <th className="py-2.5 px-3">Hour</th>
-                      <th className="py-2.5 px-3">Grid kWh</th>
-                      <th className="py-2.5 px-3">Solar Used kWh</th>
-                      <th className="py-2.5 px-3">Battery Action</th>
-                      <th className="py-2.5 px-3">Battery kWh</th>
-                      <th className="py-2.5 px-3">Battery Energy After kWh</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono text-slate-300">
-                    {result.hourly_plan.map((row) => (
-                      <tr key={row.hour} className="hover:bg-slate-800/40 transition">
-                        <td className="py-2 px-3 font-semibold text-slate-200">Hour {row.hour}</td>
-                        <td className="py-2 px-3 text-amber-300 font-medium">{row.grid_kwh.toFixed(1)}</td>
-                        <td className="py-2 px-3 text-emerald-400">{row.solar_used_kwh.toFixed(1)}</td>
-                        <td className="py-2 px-3">
-                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-sans font-semibold uppercase ${
-                            row.battery_action === 'charge'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                              : row.battery_action === 'discharge'
-                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                              : 'bg-slate-800 text-slate-400'
-                          }`}>
-                            {row.battery_action}
+              const filteredPlan = result.hourly_plan.filter(
+                (r) => tableFilter === 'all' || r.battery_action === tableFilter
+              );
+
+              return (
+                <div className="glass-card p-3 sm:p-5 space-y-4">
+                  {/* Card Header & Action Filter Controls */}
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 border-b border-white/[0.06]">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400">
+                        <Layers className="w-4 h-4 shrink-0" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-2">
+                          24-Hour Optimized Energy Schedule
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-normal border border-slate-700">
+                            {filteredPlan.length} / 24 Hours
                           </span>
-                        </td>
-                        <td className="py-2 px-3">{row.battery_kwh.toFixed(1)}</td>
-                        <td className="py-2 px-3 text-cyan-300">{row.battery_energy_after_kwh.toFixed(1)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                        </h3>
+                        <p className="text-[11px] text-slate-400">Detailed hourly breakdown of grid draw, solar usage &amp; battery state</p>
+                      </div>
+                    </div>
+
+                    {/* Filter Pills */}
+                    <div className="flex items-center bg-[#060a12] p-1 rounded-lg border border-slate-800 space-x-1 w-full md:w-auto overflow-x-auto">
+                      <Filter className="w-3.5 h-3.5 text-slate-400 ml-1.5 mr-0.5 shrink-0" />
+                      {(['all', 'charge', 'discharge', 'idle'] as const).map((filter) => {
+                        const isActive = tableFilter === filter;
+                        const count = result.hourly_plan.filter(
+                          (r) => filter === 'all' || r.battery_action === filter
+                        ).length;
+                        return (
+                          <button
+                            key={filter}
+                            onClick={() => setTableFilter(filter)}
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer capitalize flex items-center gap-1.5 whitespace-nowrap ${
+                              isActive
+                                ? filter === 'charge'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                                  : filter === 'discharge'
+                                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
+                                  : filter === 'idle'
+                                  ? 'bg-slate-700 text-slate-200 shadow-sm'
+                                  : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                            }`}
+                          >
+                            <span>{filter}</span>
+                            <span className="text-[9px] font-mono opacity-80 bg-black/40 px-1.5 py-0.2 rounded-full">
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Scrollable Table Container */}
+                  <div className="overflow-x-auto rounded-lg border border-slate-800/80 max-h-[500px] overflow-y-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead className="sticky top-0 bg-[#0d1322] z-20 shadow-md border-b border-slate-800 text-slate-400 font-medium">
+                        <tr>
+                          <th className="py-3 px-4 font-semibold text-slate-300">
+                            <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-cyan-400" /> Time Window</span>
+                          </th>
+                          <th className="py-3 px-4 font-semibold text-slate-300">
+                            <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-amber-400" /> Grid Import</span>
+                          </th>
+                          <th className="py-3 px-4 font-semibold text-slate-300">
+                            <span className="flex items-center gap-1.5"><Sun className="w-3.5 h-3.5 text-emerald-400" /> Solar Used</span>
+                          </th>
+                          <th className="py-3 px-4 font-semibold text-slate-300">
+                            <span className="flex items-center gap-1.5"><Activity className="w-3.5 h-3.5 text-cyan-400" /> Battery Action</span>
+                          </th>
+                          <th className="py-3 px-4 font-semibold text-slate-300">
+                            <span className="flex items-center gap-1.5"><BatteryCharging className="w-3.5 h-3.5 text-blue-400" /> Battery kWh</span>
+                          </th>
+                          <th className="py-3 px-4 font-semibold text-slate-300 min-w-[190px]">
+                            <span className="flex items-center gap-1.5"><Battery className="w-3.5 h-3.5 text-teal-400" /> Battery SOC</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/50 font-mono text-slate-300 bg-[#060a12]/50">
+                        {filteredPlan.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-slate-500 font-sans italic">
+                              No hours match the selected &quot;{tableFilter}&quot; filter.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredPlan.map((row) => {
+                            const socPercent = Math.min(
+                              100,
+                              Math.max(0, Math.round((row.battery_energy_after_kwh / batteryCapacity) * 100))
+                            );
+                            const isHighGrid = result.peak_grid_kwh > 0 && row.grid_kwh >= (result.peak_grid_kwh * 0.9);
+                            return (
+                              <tr
+                                key={row.hour}
+                                className={`transition-colors duration-150 ${
+                                  isHighGrid
+                                    ? 'bg-amber-500/[0.06] hover:bg-amber-500/[0.12]'
+                                    : 'hover:bg-slate-800/50 even:bg-slate-900/30'
+                                }`}
+                              >
+                                {/* Time Window */}
+                                <td className="py-2.5 px-4 font-semibold text-slate-200">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="w-6 h-6 rounded bg-slate-800 border border-slate-700 text-cyan-300 font-mono text-[11px] flex items-center justify-center font-bold shrink-0">
+                                      {String(row.hour).padStart(2, '0')}
+                                    </span>
+                                    <span className="font-sans text-xs text-slate-300 font-medium whitespace-nowrap">
+                                      {String(row.hour).padStart(2, '0')}:00 - {String((row.hour + 1) % 24).padStart(2, '0')}:00
+                                    </span>
+                                    {isHighGrid && (
+                                      <span className="text-[9px] font-sans font-semibold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                        PEAK
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Grid kWh */}
+                                <td className="py-2.5 px-4">
+                                  <span className={`font-semibold ${row.grid_kwh > 0 ? 'text-amber-300' : 'text-slate-500'}`}>
+                                    {row.grid_kwh.toFixed(1)} <span className="text-[10px] font-sans text-slate-400 font-normal">kWh</span>
+                                  </span>
+                                </td>
+
+                                {/* Solar Used kWh */}
+                                <td className="py-2.5 px-4">
+                                  <span className={`font-semibold ${row.solar_used_kwh > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                    {row.solar_used_kwh.toFixed(1)} <span className="text-[10px] font-sans text-slate-400 font-normal">kWh</span>
+                                  </span>
+                                </td>
+
+                                {/* Battery Action */}
+                                <td className="py-2.5 px-4">
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-sans font-semibold uppercase tracking-wider ${
+                                      row.battery_action === 'charge'
+                                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                        : row.battery_action === 'discharge'
+                                        ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                                        : 'bg-slate-800/80 text-slate-400 border border-slate-700/50'
+                                    }`}
+                                  >
+                                    {row.battery_action === 'charge' && <ArrowDownRight className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                                    {row.battery_action === 'discharge' && <ArrowUpRight className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
+                                    {row.battery_action === 'idle' && <Minus className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
+                                    <span>{row.battery_action}</span>
+                                  </span>
+                                </td>
+
+                                {/* Battery kWh */}
+                                <td className="py-2.5 px-4">
+                                  <span className={`font-semibold ${row.battery_kwh > 0 ? 'text-slate-200' : 'text-slate-500'}`}>
+                                    {row.battery_kwh > 0 ? `${row.battery_kwh.toFixed(1)} kWh` : '—'}
+                                  </span>
+                                </td>
+
+                                {/* Battery SOC Progress */}
+                                <td className="py-2.5 px-4">
+                                  <div className="flex items-center space-x-2.5">
+                                    <div className="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700/60 min-w-[60px]">
+                                      <div
+                                        className={`h-full rounded-full transition-all duration-300 ${
+                                          socPercent > 70
+                                            ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                                            : socPercent > 30
+                                            ? 'bg-gradient-to-r from-cyan-500 to-blue-500'
+                                            : 'bg-gradient-to-r from-amber-500 to-rose-500'
+                                        }`}
+                                        style={{ width: `${socPercent}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-cyan-300 font-bold text-xs shrink-0">
+                                      {row.battery_energy_after_kwh.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">kWh</span>
+                                    </span>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
           </>
         )}
       </main>
