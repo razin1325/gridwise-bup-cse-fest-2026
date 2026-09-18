@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  gridwise-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gridwise-optimization-app
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - LLM_PROVIDER=auto
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    restart: unless-stopped
