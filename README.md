@@ -1,205 +1,152 @@
-# BUP CSE FEST 2026: GridWise LLM Smart Campus Energy Optimization Challenge
+# GridWise — Smart Campus Energy Optimization (BUP CSE Fest 2026, Online Preliminary)
 
-Production-ready solution for the **GridWise LLM Smart Campus Energy Optimization Challenge**.
+An HTTP API that reads natural-language campus operator notes, converts them into
+machine-checkable energy directives with an LLM, validates those directives with
+deterministic guardrails, and then solves a 24-hour cost-minimization schedule with
+linear programming.
 
-GridWise is an intelligent, 3-tier energy management engine that accepts natural language operator notes, extracts structured operational directives using an LLM, sanitizes directives through deterministic guardrails, and solves a 24-hour campus electricity cost minimization problem using Linear Programming (LP).
+The service exposes exactly the two endpoints the judging harness uses:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/health` | GET | Readiness probe — returns `{"status":"ok"}` |
+| `/optimize-energy` | POST | Operator-note interpretation + 24-hour optimized plan |
 
 ---
 
-## 🚀 Core Architecture Pipeline
+## Architecture
 
 ```
-[ Operator Notes ] ---> ( Tier 1: LLM Interpreter )
-                                |
-                                v
-                       ( Tier 2: Deterministic Guardrails )
-                                |
-                                v
-                       ( Tier 3: LP Math Optimizer ) ---> [ Optimal 24-Hour Plan JSON ]
+operator_notes ──▶ Tier 1: LLM interpreter      (NVIDIA NIM / OpenAI / Gemini)
+                        │  structured directives
+                        ▼
+                   Tier 2: deterministic guardrails  (lib/guardrails.ts)
+                        │  validated, clamped, note-index aligned directives
+                        ▼
+                   Tier 3: LP optimizer              (lib/lp-optimizer.ts)
+                        │  javascript-lp-solver
+                        ▼
+                   24-hour plan + totals + summary
 ```
 
-1. **Tier 1: LLM Interpreter**: Accepts 1–3 operator notes and extracts structured energy directives using OpenAI (`gpt-4o` / `gpt-4o-mini`), Google Gemini (`gemini-1.5-flash`), or built-in deterministic fallback parsing.
-2. **Tier 2: Deterministic Guardrails**: Validates and sanitizes directive JSON outputs (enforces valid hour ranges `[0..23]`, numeric bounds, directive enum types, and sets `applies = false` for `no_op`).
-3. **Tier 3: LP Math Optimizer**: Formulates and solves a 24-hour Linear Programming model using `javascript-lp-solver` considering solar availability, battery state transitions, battery rate limits, grid import caps, directive windows, and end-of-day battery state neutrality (`battery_energy[23] === initial_energy_kwh`).
+1. **Tier 1 — LLM interpretation** (`lib/llm-interpreter.ts`).
+   The operator notes **and the scenario's battery configuration** are sent to the
+   model, which returns one structured directive per note. The battery context is
+   required so relative notes such as *"keep at least 50% of the battery capacity in
+   reserve"* can be resolved into absolute kWh. Providers are tried in order
+   (NVIDIA NIM → OpenAI → Gemini). If every provider fails, times out, or returns
+   unusable structured output, a deterministic rule-based parser produces the
+   interpretation instead, so the endpoint never fails because of a model outage.
+
+2. **Tier 2 — deterministic guardrails** (`lib/guardrails.ts`).
+   LLM output is treated as untrusted until it passes validation: unknown directive
+   types are rejected, each note is mapped to exactly one interpretation in
+   `note_index` order, hours are filtered to unique integers `0..23` and sorted
+   ascending, `factor` is clamped to `[0,1]`, reserve values are clamped to
+   `[0, capacity]`, and every `no_op` is forced to `applies=false` with
+   `structured_adjustment=null`. A directive that cannot be validated becomes
+   `no_op` rather than inventing a constraint.
+
+3. **Tier 3 — LP optimizer** (`lib/lp-optimizer.ts`).
+   A linear program over 24 hours minimizes `Σ grid_kwh[h] × tariff[h]` subject to:
+   hourly energy balance (`grid + solar_used + discharge = demand + charge`),
+   effective solar after `solar_reduction`, battery state transitions, battery
+   bounds (base minimum, or a higher directive reserve), hourly charge/discharge
+   rate limits, `no_charge_window` / `no_discharge_window`, `max_grid_window`, and
+   end-of-day neutrality (`battery_energy[23] == initial_energy_kwh`).
 
 ---
 
-## 🛠 Tech Stack
+## Quickstart (clean environment)
 
-- **Backend**: Node.js (Express.js & Next.js API Routes)
-- **Frontend**: Next.js 15 (App Router), Tailwind CSS, Lucide Icons, Recharts
-- **Optimization Library**: `javascript-lp-solver`
-- **LLM Integrations**: OpenAI API / Google Gemini API / Rule-based Fallback Parser
-- **Containerization**: Docker (Multi-stage build)
-
----
-
-## 📦 Quickstart (Local Setup)
-
-### 1. Clone & Install Dependencies
 ```bash
+# 1. install
 npm install
+
+# 2. configure
+cp .env.example .env      # then fill in your key(s) - .env is git-ignored
+
+# 3. build and run
+npm run build
+npm start                 # serves on PORT (default 3000), bound to 0.0.0.0
 ```
 
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env.local`:
+For development with hot reload, `npm run dev` (also honours `PORT`).
+
+Verify:
+
 ```bash
-cp .env.example .env.local
-```
-Set your API keys (optional; rule fallback parser operates automatically if omitted):
-```env
-OPENAI_API_KEY=your_openai_key
-# or
-GEMINI_API_KEY=your_gemini_key
+curl http://localhost:3000/health
+# {"status":"ok"}
 ```
 
-### 3. Run Development Server
-```bash
-npm run dev
-```
-Open `http://localhost:3000` to access the interactive web dashboard and API endpoints.
-
-Alternatively, to run the standalone Express server:
-```bash
-npm run server
-```
+On Windows shells use `set PORT=3100&& npm start` to override the port.
 
 ---
 
-## 🐳 Docker Deployment
+## Environment variables
 
-### Build Container
-```bash
-docker build -t gridwise-app .
-```
+| Variable | Required | Default | Purpose |
+|---|---|---|---|
+| `PORT` | no | `3000` | Port the service binds to (all interfaces) |
+| `LLM_PROVIDER` | no | `auto` | `nvidia`, `openai`, `gemini`, or `auto` |
+| `NVIDIA_API_KEY` | yes for the primary provider | — | NVIDIA NIM API key |
+| `NVIDIA_MODEL` | no | `mistralai/mistral-nemotron` | NVIDIA NIM model id |
+| `OPENAI_API_KEY` | optional | — | Enables the OpenAI fallback provider |
+| `OPENAI_MODEL` | no | `gpt-4o-mini` | OpenAI model id |
+| `GEMINI_API_KEY` | optional | — | Enables the Gemini fallback provider |
+| `GEMINI_MODEL` | no | `gemini-1.5-flash` | Gemini model id |
 
-### Run Container
-```bash
-docker run -d \
-  -p 3000:3000 \
-  -e OPENAI_API_KEY="your_api_key_here" \
-  --name gridwise-container \
-  gridwise-app
-```
+`LLM_PROVIDER=nvidia` is the tested configuration. With `auto`, providers are tried
+in the order NVIDIA → OpenAI → Gemini → deterministic parser, skipping any provider
+whose key is unset.
 
-### Docker Compose
-```bash
-docker-compose up --build -d
-```
-
----
-
-## 📡 API Contract & Endpoints
-
-### 1. `GET /health`
-- **Response** (HTTP 200 within 60s of container startup):
-```json
-{
-  "status": "ok"
-}
-```
-
-### 2. `POST /optimize-energy`
-- **Request Body**:
-```json
-{
-  "scenario_id": "GRID-101",
-  "operator_notes": [
-    "Facilities will wash the rooftop solar panels from noon until 2 PM. Usable solar should be treated as roughly 25% of forecast.",
-    "The sports office moved next month's registration deadline."
-  ],
-  "hours": [
-    { "hour": 0, "demand_kwh": 90, "solar_kwh": 0, "tariff_bdt_per_kwh": 6 },
-    { "hour": 12, "demand_kwh": 185, "solar_kwh": 180, "tariff_bdt_per_kwh": 15 },
-    { "hour": 23, "demand_kwh": 105, "solar_kwh": 0, "tariff_bdt_per_kwh": 7 }
-  ],
-  "battery": {
-    "capacity_kwh": 220,
-    "initial_energy_kwh": 110,
-    "minimum_energy_kwh": 40,
-    "max_charge_kwh_per_hour": 50,
-    "max_discharge_kwh_per_hour": 50
-  }
-}
-```
-
-- **Response Body** (HTTP 200):
-```json
-{
-  "scenario_id": "GRID-101",
-  "directive_interpretation": [
-    {
-      "note_index": 0,
-      "applies": true,
-      "directive_type": "solar_reduction",
-      "structured_adjustment": { "hours": [12, 13], "factor": 0.25 },
-      "explanation": "Usable solar reduced to 25% during specified window."
-    },
-    {
-      "note_index": 1,
-      "applies": false,
-      "directive_type": "no_op",
-      "structured_adjustment": null,
-      "explanation": "Note does not contain operational energy directives for today."
-    }
-  ],
-  "hourly_plan": [
-    {
-      "hour": 0,
-      "grid_kwh": 90,
-      "solar_used_kwh": 0,
-      "battery_action": "idle",
-      "battery_kwh": 0,
-      "battery_energy_after_kwh": 110
-    }
-  ],
-  "total_grid_kwh": 2692.5,
-  "total_cost_bdt": 38365,
-  "peak_grid_kwh": 175,
-  "plan_summary": "Optimized energy schedule applying 1 operator directive(s)."
-}
-```
+> **Model availability is per-account.** `meta/llama-3.1-8b-instruct` reached end of
+> life on 2026-08-26 and now returns `HTTP 410 Gone`, which silently degrades the
+> service to the rule-based parser. Check the models your key can actually call:
+>
+> ```bash
+> curl -H "Authorization: Bearer $NVIDIA_API_KEY" https://integrate.api.nvidia.com/v1/models
+> ```
+>
+> Verified working with this key: `mistralai/mistral-nemotron`,
+> `meta/llama-3.2-11b-vision-instruct`, `nvidia/nemotron-3-super-120b-a12b`.
+> `mistralai/mistral-nemotron` is the default because it reproduced the reference
+> optimum on all 10 public cases.
 
 ---
 
-## 🧪 Testing with cURL
+## API contract
 
-### Health Check Test
+### `GET /health`
+
 ```bash
-curl -X GET http://localhost:3000/health
+curl http://localhost:3000/health
+```
+```json
+{ "status": "ok" }
 ```
 
-### Scenario Optimization Test
+### `POST /optimize-energy`
+
+Request: `scenario_id`, 1–3 `operator_notes`, exactly 24 `hours`
+(`hour`, `demand_kwh`, `solar_kwh`, `tariff_bdt_per_kwh`), and a `battery` object
+(`capacity_kwh`, `initial_energy_kwh`, `minimum_energy_kwh`,
+`max_charge_kwh_per_hour`, `max_discharge_kwh_per_hour`).
+
 ```bash
 curl -X POST http://localhost:3000/optimize-energy \
   -H "Content-Type: application/json" \
   -d '{
-    "scenario_id": "GRID-TEST-1",
-    "operator_notes": ["Facilities will wash the rooftop solar panels from noon until 2 PM. Usable solar should be treated as roughly 25% of the forecast."],
+    "scenario_id": "DEMO-1",
+    "operator_notes": [
+      "Facilities will wash the rooftop solar panels from noon until 2 PM. During cleaning, usable solar should be treated as roughly 25% of the forecast.",
+      "Keep at least 50% of the battery capacity stored in the battery from 6 PM until 9 PM for emergency operations.",
+      "The sports office moved next month registration deadline."
+    ],
     "hours": [
       {"hour": 0, "demand_kwh": 90, "solar_kwh": 0, "tariff_bdt_per_kwh": 6},
-      {"hour": 1, "demand_kwh": 85, "solar_kwh": 0, "tariff_bdt_per_kwh": 6},
-      {"hour": 2, "demand_kwh": 80, "solar_kwh": 0, "tariff_bdt_per_kwh": 5},
-      {"hour": 3, "demand_kwh": 80, "solar_kwh": 0, "tariff_bdt_per_kwh": 5},
-      {"hour": 4, "demand_kwh": 85, "solar_kwh": 0, "tariff_bdt_per_kwh": 5},
-      {"hour": 5, "demand_kwh": 95, "solar_kwh": 0, "tariff_bdt_per_kwh": 6},
-      {"hour": 6, "demand_kwh": 110, "solar_kwh": 5, "tariff_bdt_per_kwh": 8},
-      {"hour": 7, "demand_kwh": 130, "solar_kwh": 20, "tariff_bdt_per_kwh": 10},
-      {"hour": 8, "demand_kwh": 150, "solar_kwh": 50, "tariff_bdt_per_kwh": 12},
-      {"hour": 9, "demand_kwh": 165, "solar_kwh": 90, "tariff_bdt_per_kwh": 14},
-      {"hour": 10, "demand_kwh": 175, "solar_kwh": 130, "tariff_bdt_per_kwh": 16},
-      {"hour": 11, "demand_kwh": 180, "solar_kwh": 160, "tariff_bdt_per_kwh": 16},
       {"hour": 12, "demand_kwh": 185, "solar_kwh": 180, "tariff_bdt_per_kwh": 15},
-      {"hour": 13, "demand_kwh": 180, "solar_kwh": 170, "tariff_bdt_per_kwh": 14},
-      {"hour": 14, "demand_kwh": 170, "solar_kwh": 140, "tariff_bdt_per_kwh": 13},
-      {"hour": 15, "demand_kwh": 165, "solar_kwh": 90, "tariff_bdt_per_kwh": 14},
-      {"hour": 16, "demand_kwh": 170, "solar_kwh": 45, "tariff_bdt_per_kwh": 18},
-      {"hour": 17, "demand_kwh": 185, "solar_kwh": 10, "tariff_bdt_per_kwh": 22},
-      {"hour": 18, "demand_kwh": 205, "solar_kwh": 0, "tariff_bdt_per_kwh": 28},
-      {"hour": 19, "demand_kwh": 215, "solar_kwh": 0, "tariff_bdt_per_kwh": 30},
-      {"hour": 20, "demand_kwh": 205, "solar_kwh": 0, "tariff_bdt_per_kwh": 26},
-      {"hour": 21, "demand_kwh": 175, "solar_kwh": 0, "tariff_bdt_per_kwh": 18},
-      {"hour": 22, "demand_kwh": 135, "solar_kwh": 0, "tariff_bdt_per_kwh": 10},
       {"hour": 23, "demand_kwh": 105, "solar_kwh": 0, "tariff_bdt_per_kwh": 7}
     ],
     "battery": {
@@ -211,3 +158,172 @@ curl -X POST http://localhost:3000/optimize-energy \
     }
   }'
 ```
+
+Response shape:
+
+```json
+{
+  "scenario_id": "DEMO-1",
+  "directive_interpretation": [
+    {
+      "note_index": 0,
+      "applies": true,
+      "directive_type": "solar_reduction",
+      "structured_adjustment": { "hours": [12, 13], "factor": 0.25 },
+      "explanation": "Solar availability is reduced to 25% during the cleaning window."
+    },
+    {
+      "note_index": 2,
+      "applies": false,
+      "directive_type": "no_op",
+      "structured_adjustment": null,
+      "explanation": "This note does not affect today's energy schedule."
+    }
+  ],
+  "hourly_plan": [
+    { "hour": 0, "grid_kwh": 90, "solar_used_kwh": 0, "battery_action": "idle",
+      "battery_kwh": 0, "battery_energy_after_kwh": 110 }
+  ],
+  "total_grid_kwh": 2692.5,
+  "total_cost_bdt": 38365,
+  "peak_grid_kwh": 175,
+  "plan_summary": "Optimized energy schedule applying 2 operator directive(s)."
+}
+```
+
+Directive types and their exact `structured_adjustment` shape:
+
+| `directive_type` | `structured_adjustment` |
+|---|---|
+| `solar_reduction` | `{"hours":[...], "factor": <usable fraction 0..1>}` |
+| `minimum_battery_reserve` | `{"hours":[...], "minimum_energy_kwh": <kWh>}` |
+| `no_charge_window` | `{"hours":[...]}` |
+| `no_discharge_window` | `{"hours":[...]}` |
+| `max_grid_window` | `{"hours":[...], "max_grid_kwh": <kWh>}` |
+| `no_op` | `null` (with `applies: false`) |
+
+Status codes: `200` success, `400` malformed JSON or structurally invalid request,
+`500` controlled internal error (no secrets or stack traces are returned).
+
+Time windows are start-inclusive and end-exclusive: *1 PM to 3 PM* → `[13, 14]`.
+
+---
+
+## Validate against the public sample cases
+
+Start the service, then in a second terminal:
+
+```bash
+npm run test:samples                        # defaults to http://localhost:3000
+npm run test:samples -- http://localhost:3100
+```
+
+`test-runner.js` calls the live API with `BUP_CSE_FEST_2026_Preli_Public_Sample_Cases.json`
+and checks the response the way the judge does: schema and directive shape, hour
+validity, effective-solar limits, energy balance, battery transitions/bounds/rate
+limits, directive application, end-of-day neutrality, recomputed totals, and cost
+quality against the published reference optimum.
+
+Expected result on the 10 public cases:
+
+```
+valid plans      : 10/10
+total team cost  : 377973.00 BDT
+reference cost   : 377973.00 BDT
+overall quality  : 1.000
+```
+
+---
+
+## Docker fallback
+
+Multi-stage build (`Dockerfile`): dependencies → Next.js standalone build → minimal
+`node:22-alpine` runtime running as a non-root user. The image contains no `.env`
+and no API keys; configuration is supplied at run time.
+
+```bash
+# build locally
+docker build -t gridwise-app:1.0.0 .
+
+# or pull the submitted image
+docker pull <your-dockerhub-username>/gridwise-app:1.0.0
+
+docker run -d --name gridwise \
+  -p 3000:3000 \
+  -e LLM_PROVIDER=nvidia \
+  -e NVIDIA_API_KEY="<your-key>" \
+  -e NVIDIA_MODEL=mistralai/mistral-nemotron \
+  gridwise-app:1.0.0
+
+# wait for the HEALTHCHECK to report healthy, then:
+curl http://localhost:3000/health
+```
+
+The container listens on **port 3000** bound to `0.0.0.0`. If host port 3000 is
+already taken, map another host port, e.g. `-p 3100:3000`.
+
+`docker-compose.yml` is also provided:
+
+```bash
+NVIDIA_API_KEY="<your-key>" docker compose up --build -d
+```
+
+---
+
+## Deploy on Vercel
+
+The repository is a standard Next.js app, so it deploys without extra configuration:
+
+1. Push the repository to GitHub.
+2. In Vercel, **Add New → Project**, import the repository.
+3. Add the environment variables (`LLM_PROVIDER`, `NVIDIA_API_KEY`, `NVIDIA_MODEL`)
+   for the Production environment.
+4. Deploy, then smoke test
+   `https://<project>.vercel.app/health` and `POST /optimize-energy`.
+
+`/health` and `/optimize-energy` are wired with `next.config.js` rewrites, which
+Vercel honours, so the judge-facing paths match the specification exactly. Do not
+set `PORT` on Vercel — the platform manages it.
+
+---
+
+## Known limitations
+
+- **Provider latency.** The NVIDIA NIM free tier occasionally stalls for 9–12 s on
+  roughly 1 request in 10 (typical response is 2–3 s). Requests are capped at a 12 s
+  model timeout with retries disabled, so the p95 stays well inside the 30 s
+  per-request limit; a stalled call falls through to the deterministic parser, which
+  keeps the response valid and near-optimal.
+- **Model choice matters.** A small 8B model mis-translated some time windows
+  (for example *"from 10 AM until noon"*) during testing; the configured
+  `mistralai/mistral-nemotron` reproduced the reference optimum on all 10 public
+  cases, but hidden paraphrases may still be mistranslated.
+- The rule-based fallback covers the directive phrasings in the public pack, but it is
+  a safety net, not a replacement for the LLM.
+- The service is stateless; it holds no cache and no database.
+
+---
+
+## Security & secret handling
+
+- No keys, tokens, or `.env` files are committed — `.env` is git-ignored and listed in
+  `.dockerignore`.
+- Next.js copies `.env` into `.next/standalone` at build time; the `Dockerfile`
+  deletes those files inside the build stage so credentials cannot reach an image layer.
+- API responses never include stack traces or configuration values; provider errors
+  are swallowed and fail over to the deterministic parser.
+
+---
+
+## Dependencies & credits
+
+| Component | Library |
+|---|---|
+| Web framework / API routes | Next.js 15 (App Router), React 19 |
+| Solver | `javascript-lp-solver` |
+| LLM SDKs | `openai` (NVIDIA NIM is OpenAI-compatible), `@google/generative-ai` |
+| UI (dashboard) | Tailwind CSS, Recharts, lucide-react |
+| Standalone server (secondary) | Express, cors |
+
+Only synthetic challenge data is used; no live campus, utility, billing, or personal
+data is involved.

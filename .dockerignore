@@ -1,0 +1,26 @@
+# Build output / dependencies are reinstalled inside the image
+node_modules
+.next
+out
+
+# Version control
+.git
+.gitignore
+
+# Secrets - never bake credentials into an image layer
+.env
+.env.*
+!.env.example
+
+# Local tooling / logs
+*.log
+npm-debug.log*
+.vscode
+.idea
+.puku
+.commandcode
+
+# Container definitions and docs are not needed at runtime
+Dockerfile
+docker-compose.yml
+README.md

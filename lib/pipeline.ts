@@ -7,7 +7,7 @@ export async function processEnergyOptimizationScenario(input: any): Promise<Opt
   const notes = Array.isArray(input?.operator_notes) ? input.operator_notes : [];
 
   // Tier 1: LLM Interpreter
-  const rawDirectives = await interpretOperatorNotes(notes);
+  const rawDirectives = await interpretOperatorNotes(notes, input?.battery);
 
   // Tier 2: Deterministic Guardrails
   const sanitizedScenario = sanitizeAndValidateScenario(input, rawDirectives);

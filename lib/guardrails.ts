@@ -90,8 +90,19 @@ export function sanitizeAndValidateScenario(
 
   const sanitizedDirectives: DirectiveInterpretation[] = [];
 
+  // Map each note to exactly one interpretation. A trustworthy note_index wins;
+  // otherwise fall back to the position the model returned the entry in.
+  const directivesByNoteIndex = new Map<number, DirectiveInterpretation>();
+  rawDirectives.forEach((dir, position) => {
+    const key =
+      Number.isInteger(dir?.note_index) && dir.note_index >= 0 && dir.note_index < operator_notes.length
+        ? dir.note_index
+        : position;
+    if (!directivesByNoteIndex.has(key)) directivesByNoteIndex.set(key, dir);
+  });
+
   operator_notes.forEach((note, idx) => {
-    const rawDir = rawDirectives[idx] || {
+    const rawDir = directivesByNoteIndex.get(idx) || {
       note_index: idx,
       applies: false,
       directive_type: 'no_op',

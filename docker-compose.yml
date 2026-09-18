@@ -1,16 +1,21 @@
-version: '3.8'
-
 services:
   gridwise-app:
     build:
       context: .
       dockerfile: Dockerfile
+    image: gridwise-app:1.0.0
     container_name: gridwise-optimization-app
+    # Host port is configurable because 3000 may already be in use:
+    #   HOST_PORT=3100 docker compose up -d
     ports:
-      - "3000:3000"
+      - "${HOST_PORT:-3000}:3000"
     environment:
-      - PORT=3000
-      - LLM_PROVIDER=auto
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      PORT: 3000
+      LLM_PROVIDER: ${LLM_PROVIDER:-nvidia}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NVIDIA_MODEL: ${NVIDIA_MODEL:-mistralai/mistral-nemotron}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
     restart: unless-stopped
