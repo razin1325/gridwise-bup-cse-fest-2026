@@ -241,7 +241,7 @@ Registry reference (public):
 
 ```
 toriqulhaque/gridwise-app:1.0.0
-toriqulhaque/gridwise-app@sha256:23fce654e3124a6d04cdb6bc92bd12c5501c7cd7ae4e599e1377889495b5458a
+toriqulhaque/gridwise-app@sha256:e002206e5214f808d325ac2d612067a423923f019e38b493cc40df3941177031
 ```
 
 Multi-stage build (`Dockerfile`): dependencies → Next.js standalone build → minimal
