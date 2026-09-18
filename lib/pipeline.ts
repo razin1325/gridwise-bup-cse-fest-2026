@@ -99,8 +99,12 @@ export async function processEnergyOptimizationScenario(input: any): Promise<Opt
   if (!input || typeof input !== 'object') {
     throw new ValidationError('Request body must be a valid JSON object.');
   }
-  if (!Array.isArray(input.operator_notes) || input.operator_notes.length === 0) {
-    throw new ValidationError('operator_notes must be a non-empty array of strings.');
+  if (
+    !Array.isArray(input.operator_notes) ||
+    input.operator_notes.length === 0 ||
+    input.operator_notes.some((n: any) => typeof n !== 'string' || n.trim().length === 0)
+  ) {
+    throw new ValidationError('operator_notes must be a non-empty array of valid strings.');
   }
   if (!Array.isArray(input.hours) || input.hours.length === 0) {
     throw new ValidationError('hours must be a non-empty array of 24 hourly objects.');

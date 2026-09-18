@@ -156,7 +156,7 @@ function extractUsableFraction(text: string): number | null {
  * Used only when no configured LLM provider returns a usable interpretation.
  */
 function parseNoteFallback(note: string, index: number, capacityKwh?: number): DirectiveInterpretation {
-  const lower = note.toLowerCase();
+  const lower = (typeof note === 'string' ? note : String(note || '')).toLowerCase();
   const hours = getHoursFromText(lower);
 
   // Solar Reduction
