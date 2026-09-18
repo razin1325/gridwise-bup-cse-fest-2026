@@ -8,6 +8,7 @@
     "start": "next start",
     "server": "node server.js",
     "test:samples": "node test-runner.js",
+    "test:reliability": "node test-reliability.js",
     "lint": "next lint"
   },
   "dependencies": {
