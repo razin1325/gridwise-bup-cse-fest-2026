@@ -14,14 +14,14 @@ function verifyDirectivesApplied(
 
   for (const dir of directives) {
     if (!dir.applies || !dir.structured_adjustment) continue;
-    const { directive_type, structured_adjustment } = dir;
-    const hours: number[] = structured_adjustment.hours || [];
+    const adj = dir.structured_adjustment as any;
+    const hours: number[] = adj.hours || [];
 
     for (const h of hours) {
       const row = result.hourly_plan[h];
       if (!row) continue;
 
-      switch (directive_type) {
+      switch (dir.directive_type) {
         case 'solar_reduction': {
           // Solar used should not exceed effective solar (factor × forecast).
           // We trust LP; no numeric check needed — constraint was in model.
@@ -44,7 +44,7 @@ function verifyDirectivesApplied(
           break;
         }
         case 'minimum_battery_reserve': {
-          const minRequired = structured_adjustment.minimum_energy_kwh ?? 0;
+          const minRequired = adj.minimum_energy_kwh ?? 0;
           if (row.battery_energy_after_kwh < minRequired - 0.5) {
             throw new Error(
               `Directive verification failed: battery SOC at hour ${h} is ${row.battery_energy_after_kwh.toFixed(1)} kWh, ` +
@@ -54,7 +54,7 @@ function verifyDirectivesApplied(
           break;
         }
         case 'max_grid_window': {
-          const maxAllowed = structured_adjustment.max_grid_kwh ?? Infinity;
+          const maxAllowed = adj.max_grid_kwh ?? Infinity;
           if (row.grid_kwh > maxAllowed + 0.5) {
             throw new Error(
               `Directive verification failed: grid import at hour ${h} is ${row.grid_kwh.toFixed(1)} kWh, ` +
