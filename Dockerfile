@@ -42,5 +42,10 @@ USER nextjs
 
 EXPOSE 3000
 
+# Healthcheck: poll GET /health on port 3000
+# Uses Node's built-in http module (no extra dependencies needed)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+
 # Start server listening on 0.0.0.0:3000
 CMD ["npm", "run", "start"]
