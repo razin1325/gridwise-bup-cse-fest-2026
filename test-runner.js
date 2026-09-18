@@ -217,7 +217,9 @@ async function main() {
   console.log(`Cases:  ${cases.length}\n`);
 
   try {
-    const healthRes = await fetch(`${BASE_URL}/health`);
+    const healthRes = await fetch(`${BASE_URL}/health`, {
+      headers: { 'bypass-tunnel-reminder': 'true' },
+    });
     const healthBody = await healthRes.json().catch(() => null);
     const healthy = healthRes.status === 200 && healthBody?.status === 'ok';
     console.log(`${healthy ? 'PASS' : 'FAIL'}  GET /health -> ${healthRes.status} ${JSON.stringify(healthBody)}`);
@@ -243,7 +245,10 @@ async function main() {
     try {
       const res = await fetch(`${BASE_URL}/optimize-energy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'bypass-tunnel-reminder': 'true',
+        },
         body: JSON.stringify(testCase.input),
       });
       status = res.status;
