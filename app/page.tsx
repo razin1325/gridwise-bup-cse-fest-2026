@@ -48,6 +48,7 @@ export default function EnergyOptimizationDashboard() {
   const [result, setResult] = useState<OptimizationResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [healthStatus, setHealthStatus] = useState<string>('checking');
+  const [jsonOpen, setJsonOpen] = useState<boolean>(false);
 
   const currentCase = SAMPLE_CASES.find((c) => c.id === selectedCaseId);
 
@@ -165,199 +166,217 @@ export default function EnergyOptimizationDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6 relative z-10">
-        {/* Preset Selector Dropdown */}
+        {/* Sample Case Card Selector */}
         <div className="p-4 rounded-xl glass-card space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
-              <Sliders className="w-4 h-4 text-cyan-400" />
-              <span>Select Official Sample Test Case (10 Public Cases):</span>
-            </div>
-            
-            <div className="relative inline-block w-full sm:w-80">
-              <select
-                value={selectedCaseId}
-                onChange={(e) => handleSelectCase(e.target.value)}
-                className="w-full bg-[#060a12] border border-cyan-500/30 text-cyan-300 font-medium text-xs px-3 py-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:border-cyan-400 pr-8"
-              >
-                {SAMPLE_CASES.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-slate-900 text-slate-200">
-                    [{c.id}] {c.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-cyan-400 absolute right-2.5 top-2.5 pointer-events-none" />
-            </div>
+          <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
+            <Sliders className="w-4 h-4 text-cyan-400" />
+            <span>Official Sample Test Cases <span className="text-xs font-normal text-slate-400 ml-1">(10 Public Cases)</span></span>
           </div>
 
+          {/* 5×2 Card Grid */}
+          <div className="grid grid-cols-5 gap-2">
+            {SAMPLE_CASES.map((c, idx) => {
+              const isActive = selectedCaseId === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => handleSelectCase(c.id)}
+                  className={`flex flex-col items-start gap-1.5 px-3 py-2.5 rounded-lg border text-left transition-all cursor-pointer w-full ${
+                    isActive
+                      ? 'bg-cyan-500/15 border-cyan-500/60 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                      : 'bg-slate-900/50 border-slate-800 hover:border-slate-600 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded ${
+                    isActive ? 'bg-cyan-500/25 text-cyan-300' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    #{String(idx + 1).padStart(2, '0')}
+                  </span>
+                  <span className={`text-[10px] leading-tight font-medium ${
+                    isActive ? 'text-cyan-200' : 'text-slate-300'
+                  }`}>
+                    {c.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Selected Case Rationale */}
           {currentCase && (
             <div className="p-3 bg-slate-900/60 border border-slate-800 rounded-lg text-xs text-slate-300 flex items-start space-x-2.5">
               <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
               <div>
-                <span className="font-semibold text-cyan-300">{currentCase.id} - {currentCase.label}:</span>{' '}
+                <span className="font-semibold text-cyan-300">{currentCase.id} — {currentCase.label}:</span>{' '}
                 <span className="text-slate-300">{currentCase.rationale}</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Input & Output Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* JSON Scenario Input */}
-          <div className="lg:col-span-6 flex flex-col space-y-3 glass-card p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
-                <FileCode className="w-4 h-4 text-cyan-400" />
-                <span>Scenario JSON Input</span>
-              </div>
-              <span className="text-xs text-slate-400 font-mono">POST /optimize-energy</span>
+        {/* Input Section — collapsible accordion */}
+        <div className="glass-card overflow-hidden">
+          {/* Accordion Header */}
+          <button
+            onClick={() => setJsonOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-white/[0.03] transition-colors"
+          >
+            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
+              <FileCode className="w-4 h-4 text-cyan-400" />
+              <span>Scenario JSON Input</span>
+              <span className="text-xs font-mono text-slate-400 font-normal ml-1">POST /optimize-energy</span>
             </div>
-            <textarea
-              value={jsonInput}
-              onChange={(e) => setJsonInput(e.target.value)}
-              className="w-full h-96 bg-[#060a12] text-slate-200 font-mono text-xs p-4 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500/50 resize-none leading-relaxed"
-              placeholder="Paste scenario JSON payload..."
+            <ChevronDown
+              className={`w-4 h-4 text-cyan-400 transition-transform duration-300 ${
+                jsonOpen ? 'rotate-180' : 'rotate-0'
+              }`}
             />
-            {errorMsg && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-xs text-rose-300 flex items-center space-x-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
+          </button>
+
+          {/* Collapsible Body */}
+          {jsonOpen && (
+            <div className="px-5 pb-5 flex flex-col space-y-3 border-t border-white/[0.05]">
+              <textarea
+                value={jsonInput}
+                onChange={(e) => setJsonInput(e.target.value)}
+                className="w-full h-64 bg-[#060a12] text-slate-200 font-mono text-xs p-4 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500/50 resize-none leading-relaxed mt-3"
+                placeholder="Paste scenario JSON payload..."
+              />
+              {errorMsg && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-xs text-rose-300 flex items-center space-x-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Ready Placeholder — shown only when no result yet */}
+        {!result && (
+          <div className="glass-card p-8 flex flex-col items-center justify-center text-center space-y-3 text-slate-400">
+            <Sparkles className="w-8 h-8 text-cyan-400/60 animate-bounce" />
+            <h3 className="text-sm font-semibold text-slate-200">Ready to Optimize Scenario</h3>
+            <p className="text-xs max-w-sm text-slate-400">
+              Select any of the 10 official public hackathon sample cases above or edit the scenario JSON, then click <strong>&quot;Run Optimization&quot;</strong> to evaluate.
+            </p>
           </div>
+        )}
 
-          {/* Results Summary & Directives */}
-          <div className="lg:col-span-6 flex flex-col space-y-4">
-            {result ? (
-              <>
-                {/* Metric Cards */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="glass-card-glow p-4 flex flex-col justify-between">
-                    <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-                      <span>Total Cost</span>
-                      <span className="w-6 h-6 rounded-md bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-bold text-sm flex items-center justify-center">৳</span>
-                    </div>
-                    <div className="mt-2">
-                      <div className="text-xl font-bold text-cyan-300">
-                        ৳{result.total_cost_bdt.toLocaleString()}
-                      </div>
-                      <span className="text-[10px] text-slate-400">BDT Total 24h</span>
-                    </div>
+        {/* Results Summary & Directives — shown only when result exists */}
+        {result && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left: Metric Cards + Reference Truth + Directives */}
+            <div className="lg:col-span-6 flex flex-col space-y-4">
+              {/* Metric Cards */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="glass-card-glow p-4 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                    <span>Total Cost</span>
+                    <span className="w-6 h-6 rounded-md bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-bold text-sm flex items-center justify-center">৳</span>
                   </div>
-
-                  <div className="glass-card p-4 flex flex-col justify-between">
-                    <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-                      <span>Total Grid Import</span>
-                      <Zap className="w-4 h-4 text-amber-400" />
-                    </div>
-                    <div className="mt-2">
-                      <div className="text-xl font-bold text-amber-300">
-                        {result.total_grid_kwh.toLocaleString()} <span className="text-xs">kWh</span>
-                      </div>
-                      <span className="text-[10px] text-slate-400">Sum of 24 hours</span>
-                    </div>
-                  </div>
-
-                  <div className="glass-card p-4 flex flex-col justify-between">
-                    <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-                      <span>Peak Grid Draw</span>
-                      <Activity className="w-4 h-4 text-rose-400" />
-                    </div>
-                    <div className="mt-2">
-                      <div className="text-xl font-bold text-rose-300">
-                        {result.peak_grid_kwh.toLocaleString()} <span className="text-xs">kWh</span>
-                      </div>
-                      <span className="text-[10px] text-slate-400">Max hourly grid import</span>
-                    </div>
+                  <div className="mt-2">
+                    <div className="text-xl font-bold text-cyan-300">৳{result.total_cost_bdt.toLocaleString()}</div>
+                    <span className="text-[10px] text-slate-400">BDT Total 24h</span>
                   </div>
                 </div>
 
-                {/* Reference Truth Match Card */}
-                {currentCase?.expected_output && (
-                  <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-300 flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Award className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>
-                        Official Reference Ground Truth: Cost <strong>৳{currentCase.expected_output.total_cost_bdt}</strong> | Grid <strong>{currentCase.expected_output.total_grid_kwh} kWh</strong>
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold">
-                      VERIFIED MATCH
+                <div className="glass-card p-4 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                    <span>Total Grid Import</span>
+                    <Zap className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div className="mt-2">
+                    <div className="text-xl font-bold text-amber-300">{result.total_grid_kwh.toLocaleString()} <span className="text-xs">kWh</span></div>
+                    <span className="text-[10px] text-slate-400">Sum of 24 hours</span>
+                  </div>
+                </div>
+
+                <div className="glass-card p-4 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                    <span>Peak Grid Draw</span>
+                    <Activity className="w-4 h-4 text-rose-400" />
+                  </div>
+                  <div className="mt-2">
+                    <div className="text-xl font-bold text-rose-300">{result.peak_grid_kwh.toLocaleString()} <span className="text-xs">kWh</span></div>
+                    <span className="text-[10px] text-slate-400">Max hourly grid import</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reference Truth Match Card */}
+              {currentCase?.expected_output && (
+                <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-300 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Award className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>
+                      Official Reference Ground Truth: Cost <strong>৳{currentCase.expected_output.total_cost_bdt}</strong> | Grid <strong>{currentCase.expected_output.total_grid_kwh} kWh</strong>
                     </span>
                   </div>
-                )}
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold">
+                    VERIFIED MATCH
+                  </span>
+                </div>
+              )}
+            </div>
 
-                {/* Directive Interpretations List */}
-                <div className="glass-card p-5 space-y-3 flex-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
-                      <Cpu className="w-4 h-4 text-cyan-400" />
-                      <span>Tier 1 & Tier 2: LLM Directive Parser & Guardrails</span>
-                    </div>
-                    <span className="text-[11px] text-slate-400">{result.directive_interpretation.length} note(s) processed</span>
-                  </div>
+            {/* Right: Directive Interpretations */}
+            <div className="lg:col-span-6 glass-card p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
+                  <Cpu className="w-4 h-4 text-cyan-400" />
+                  <span>Tier 1 &amp; Tier 2: LLM Directive Parser &amp; Guardrails</span>
+                </div>
+                <span className="text-[11px] text-slate-400">{result.directive_interpretation.length} note(s) processed</span>
+              </div>
 
-                  <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-                    {result.directive_interpretation.map((dir, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-3 rounded-lg border text-xs flex flex-col space-y-1.5 transition ${
-                          dir.applies
-                            ? 'bg-cyan-950/20 border-cyan-500/30 text-slate-200'
-                            : 'bg-slate-900/40 border-slate-800 text-slate-400'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 font-mono">
-                            <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">
-                              Note #{dir.note_index}
-                            </span>
-                            <span className={`font-semibold px-2 py-0.5 rounded-full text-[10px] uppercase ${
-                              dir.applies ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-slate-800 text-slate-400'
-                            }`}>
-                              {dir.directive_type}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center space-x-1 font-medium">
-                            {dir.applies ? (
-                              <span className="text-emerald-400 flex items-center gap-1 text-[11px]">
-                                <CheckCircle2 className="w-3.5 h-3.5" /> Applied
-                              </span>
-                            ) : (
-                              <span className="text-slate-500 flex items-center gap-1 text-[11px]">
-                                <XCircle className="w-3.5 h-3.5" /> Ignored (No-Op)
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <p className="text-xs italic text-slate-300">"{dir.explanation}"</p>
-
-                        {dir.structured_adjustment && (
-                          <div className="font-mono text-[10px] text-cyan-400/90 bg-[#060a12] p-1.5 rounded border border-slate-800/80">
-                            Structured Adjustment: {JSON.stringify(dir.structured_adjustment)}
-                          </div>
+              <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                {result.directive_interpretation.map((dir, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-3 rounded-lg border text-xs flex flex-col space-y-1.5 transition ${
+                      dir.applies
+                        ? 'bg-cyan-950/20 border-cyan-500/30 text-slate-200'
+                        : 'bg-slate-900/40 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 font-mono">
+                        <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">Note #{dir.note_index}</span>
+                        <span className={`font-semibold px-2 py-0.5 rounded-full text-[10px] uppercase ${
+                          dir.applies ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          {dir.directive_type}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1 font-medium">
+                        {dir.applies ? (
+                          <span className="text-emerald-400 flex items-center gap-1 text-[11px]">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Applied
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 flex items-center gap-1 text-[11px]">
+                            <XCircle className="w-3.5 h-3.5" /> Ignored (No-Op)
+                          </span>
                         )}
                       </div>
-                    ))}
+                    </div>
+                    <p className="text-xs italic text-slate-300">&quot;{dir.explanation}&quot;</p>
+                    {dir.structured_adjustment && (
+                      <div className="font-mono text-[10px] text-cyan-400/90 bg-[#060a12] p-1.5 rounded border border-slate-800/80">
+                        Structured Adjustment: {JSON.stringify(dir.structured_adjustment)}
+                      </div>
+                    )}
                   </div>
-
-                  <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
-                    <strong className="text-slate-300 font-semibold">Optimization Strategy:</strong> {result.plan_summary}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="glass-card p-8 flex flex-col items-center justify-center h-full text-center space-y-3 text-slate-400">
-                <Sparkles className="w-8 h-8 text-cyan-400/60 animate-bounce" />
-                <h3 className="text-sm font-semibold text-slate-200">Ready to Optimize Scenario</h3>
-                <p className="text-xs max-w-sm text-slate-400">
-                  Select any of the 10 official public hackathon sample cases above or edit the scenario JSON, then click <strong>"Run Optimization"</strong> to evaluate.
-                </p>
+                ))}
               </div>
-            )}
+
+              <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
+                <strong className="text-slate-300 font-semibold">Optimization Strategy:</strong> {result.plan_summary}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Charts & Interactive Visualization */}
         {result && (
