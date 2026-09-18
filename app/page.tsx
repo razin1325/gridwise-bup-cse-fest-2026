@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import ElectricityAnimation from './components/ElectricityAnimation';
 import {
   Zap,
   Activity,
@@ -8,7 +9,6 @@ import {
   ShieldCheck,
   BatteryCharging,
   Sun,
-  DollarSign,
   Play,
   CheckCircle2,
   XCircle,
@@ -124,8 +124,10 @@ export default function EnergyOptimizationDashboard() {
 
   return (
     <div className="min-h-screen pb-16">
+      {/* Electricity Decoration */}
+      <ElectricityAnimation />
       {/* Top Header */}
-      <header className="border-b border-border bg-[#0d1322]/90 backdrop-blur sticky top-0 z-50">
+      <header className="border-b border-border bg-[#0d1322]/90 backdrop-blur sticky top-0 z-50 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400">
@@ -162,7 +164,7 @@ export default function EnergyOptimizationDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6 relative z-10">
         {/* Preset Selector Dropdown */}
         <div className="p-4 rounded-xl glass-card space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -232,7 +234,7 @@ export default function EnergyOptimizationDashboard() {
                   <div className="glass-card-glow p-4 flex flex-col justify-between">
                     <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
                       <span>Total Cost</span>
-                      <DollarSign className="w-4 h-4 text-cyan-400" />
+                      <span className="w-6 h-6 rounded-md bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-bold text-sm flex items-center justify-center">৳</span>
                     </div>
                     <div className="mt-2">
                       <div className="text-xl font-bold text-cyan-300">
