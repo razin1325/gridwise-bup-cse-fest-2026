@@ -68,8 +68,12 @@ operator_notes ──▶ Tier 1: LLM interpreter      (NVIDIA NIM / OpenAI / Gem
 ## Quickstart (clean environment)
 
 ```bash
-# 1. install
-npm install
+# 0. clone
+git clone https://github.com/razin1325/gridwise-bup-cse-fest-2026.git
+cd gridwise-bup-cse-fest-2026
+
+# 1. install (must include dev dependencies: tailwindcss/postcss are devDeps)
+npm install --include=dev
 
 # 2. configure
 cp .env.example .env      # then fill in your key(s) - .env is git-ignored
@@ -108,6 +112,19 @@ On Windows shells use `set PORT=3100&& npm start` to override the port.
 `LLM_PROVIDER=nvidia` is the primary tested configuration. With `auto`, providers are tried
 in the order NVIDIA → OpenAI → Gemini → deterministic parser, skipping any provider
 whose key is unset.
+
+**Model availability is per account.** `meta/llama-3.1-8b-instruct` reached end of life on
+2026-08-26 and now returns `HTTP 410 Gone` — a deployment pinned to it silently degrades to
+the rule-based parser. Check which models your key can actually call before deploying:
+
+```bash
+curl -H "Authorization: Bearer $NVIDIA_API_KEY" https://integrate.api.nvidia.com/v1/models
+```
+
+Verified working: `mistralai/mistral-nemotron` (default),
+`meta/llama-3.2-11b-vision-instruct`, `nvidia/nemotron-3-super-120b-a12b`.
+Adding an `OPENAI_API_KEY` or `GEMINI_API_KEY` enables an automatic second provider, which
+is the cheapest insurance against a single provider outage during evaluation.
 
 ---
 
@@ -229,10 +246,11 @@ Result:
 
 ## Docker Deployment
 
-Registry reference (public):
+Registry reference (public, no login required):
 
 ```text
 toriqulhaque/gridwise-app:1.0.0
+toriqulhaque/gridwise-app@sha256:e2f9ff416b25ec98a3e6f3a795515737fd421fb7cf208a84c128149c931580ea
 ```
 
 Multi-stage build (`Dockerfile`): dependencies → Next.js standalone build → minimal `node:22-alpine` runtime running as non-root. Exposed port is **3000** and server binds to `0.0.0.0`.
@@ -267,6 +285,40 @@ NVIDIA_API_KEY="<your-key>" docker compose up --build -d
 2. In Vercel, **Add New → Project**, import repository.
 3. Add environment variables (`LLM_PROVIDER`, `NVIDIA_API_KEY`, `NVIDIA_MODEL`).
 4. Deploy and test `/health` and `/optimize-energy`.
+
+---
+
+## Known limitations
+
+- **Provider latency is the main variable.** The NVIDIA NIM free tier occasionally stalls
+  for several seconds on roughly 1 request in 10. Each provider is capped at an 8s timeout
+  with `maxRetries=0`, so the total chain stays far inside the 30s per-request limit; a
+  stalled call falls through to the deterministic parser, which keeps the response valid
+  and cost-optimal on the public cases.
+- **Fallback parsing is phrase-based.** The deterministic parser covers the directive
+  phrasings in the public pack, but it is a safety net, not a substitute for the LLM.
+  Paraphrase robustness on unseen notes rests on the model answering.
+- **Model choice materially affects interpretation.** A small 8B model mis-translated some
+  time windows during testing (for example reading *"from 10 AM until noon"* as 10:00–23:00);
+  end-exclusive windows are the most likely failure mode on hidden cases.
+- **The service is stateless** — no cache and no database, so identical requests re-invoke
+  the provider every time.
+- **Vercel:** do not set `PORT` (the platform assigns it). Function duration defaults to
+  300s on Hobby with fluid compute, so the 8s provider timeout is not a constraint there.
+
+## Security & secret handling
+
+- No API keys, tokens, or `.env` files are committed. `.env` is git-ignored and listed in
+  `.dockerignore`.
+- Next.js copies `.env` into `.next/standalone` during a build. The `Dockerfile` deletes
+  those files inside the build stage, so credentials cannot reach an image layer. Verified:
+  the published image contains no `.env` and no `nvapi-` string.
+- API responses never contain stack traces or configuration values. Provider errors are
+  caught and fail over; internal failures return a controlled `500` with a generic message.
+- Only synthetic challenge data is used — no live campus, utility, billing, or personal data.
+- **Operational note:** rotate the `NVIDIA_API_KEY` if it has ever been pasted into a shared
+  channel, log, or commit. Keys are supplied at runtime via `docker run -e` or the hosting
+  platform's environment settings, never baked into artifacts.
 
 ---
 
