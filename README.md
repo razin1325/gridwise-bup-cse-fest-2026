@@ -5,6 +5,8 @@ machine-checkable energy directives with an LLM, validates those directives with
 deterministic guardrails, and then solves a 24-hour cost-minimization schedule with
 linear programming.
 
+---
+
 The service exposes exactly the two endpoints the judging harness uses:
 
 | Endpoint | Method | Purpose |
