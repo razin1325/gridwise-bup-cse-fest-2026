@@ -515,8 +515,8 @@ export default function EnergyOptimizationDashboard() {
                     </div>
                   </div>
 
-                  {/* Scrollable Table Container */}
-                  <div className="overflow-x-auto rounded-lg border border-slate-800/80 max-h-[500px] overflow-y-auto">
+                  {/* Full Display Table Container (No internal vertical scroll) */}
+                  <div className="overflow-x-auto rounded-lg border border-slate-800/80">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead className="sticky top-0 bg-[#0d1322] z-20 shadow-md border-b border-slate-800 text-slate-400 font-medium">
                         <tr>
