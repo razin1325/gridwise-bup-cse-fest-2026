@@ -303,11 +303,10 @@ export async function interpretOperatorNotes(
       const nvidiaClient = new OpenAI({
         apiKey: nvidiaKey,
         baseURL: 'https://integrate.api.nvidia.com/v1',
-        // Kept well below the 30s per-request judging limit so a slow provider
-        // still leaves room for the deterministic fallback parser to answer.
-        // maxRetries must stay 0: the SDK default of 2 would multiply the
-        // timeout into a ~45s worst case and blow the limit.
-        timeout: 12000,
+        // 8 s per provider keeps worst-case 3-provider chain at ~24 s — safely
+        // under the 30 s judging deadline. maxRetries=0: the default of 2 would
+        // multiply the timeout to ~25 s for this provider alone.
+        timeout: 8000,
         maxRetries: 0,
       });
 
@@ -335,7 +334,7 @@ export async function interpretOperatorNotes(
   // ── Tier 1B: OpenAI ───────────────────────────────────────────────────────
   if ((provider === 'openai' || provider === 'auto') && openaiKey) {
     try {
-      const openai = new OpenAI({ apiKey: openaiKey, timeout: 12000, maxRetries: 0 });
+      const openai = new OpenAI({ apiKey: openaiKey, timeout: 8000, maxRetries: 0 });
       const completion = await openai.chat.completions.create({
         model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
         messages: [
@@ -369,11 +368,18 @@ export async function interpretOperatorNotes(
         },
       });
 
-      const response = await model.generateContent(
-        `${SYSTEM_PROMPT}\n\nOperator Notes:\n${userContent}`
-      );
-
-      const text = response.response.text();
+      const ac = new AbortController();
+      const abortTimer = setTimeout(() => ac.abort(), 8000);
+      let text = '';
+      try {
+        const response = await model.generateContent(
+          `${SYSTEM_PROMPT}\n\nOperator Notes:\n${userContent}`,
+          { signal: ac.signal } as any
+        );
+        text = response.response.text();
+      } finally {
+        clearTimeout(abortTimer);
+      }
       const directives = parseDirectivesFromText(text, notes.length);
       if (directives) {
         console.log('[LLM] Using Gemini provider');
