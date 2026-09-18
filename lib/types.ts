@@ -15,7 +15,7 @@ export interface SolarReductionAdjustment {
 
 export interface MinimumBatteryReserveAdjustment {
   hours: number[];
-  directive_min_kwh: number;
+  minimum_energy_kwh: number;
 }
 
 export interface NoChargeWindowAdjustment {

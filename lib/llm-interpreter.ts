@@ -13,7 +13,7 @@ Allowed Directive Types:
    - structured_adjustment: { "hours": [array of integers 0..23], "factor": number between 0.0 and 1.0 }
    - Rule: factor is the USABLE fraction remaining. An 80% reduction means factor = 0.2. 25% of forecast means factor = 0.25.
 2. "minimum_battery_reserve": High reserve required for battery SOC.
-   - structured_adjustment: { "hours": [array of integers 0..23], "directive_min_kwh": number >= 0 }
+   - structured_adjustment: { "hours": [array of integers 0..23], "minimum_energy_kwh": number >= 0 }
 3. "no_charge_window": Battery charging is strictly forbidden.
    - structured_adjustment: { "hours": [array of integers 0..23] }
 4. "no_discharge_window": Battery discharging is strictly forbidden.
@@ -155,23 +155,22 @@ function parseNoteFallback(note: string, index: number): DirectiveInterpretation
   if (lower.includes('reserve') || lower.includes('keep battery') || lower.includes('minimum battery') || lower.includes('at least') || lower.includes('must remain above')) {
     const hours = getHoursFromText(lower);
     const validHours = hours.length > 0 ? hours : [17, 18, 19, 20];
-    let directive_min_kwh = 100;
+    let minimum_energy_kwh = 100;
 
     const numMatch = lower.match(/(\d+)\s*kwh/);
-    if (numMatch) directive_min_kwh = parseFloat(numMatch[1]);
+    if (numMatch) minimum_energy_kwh = parseFloat(numMatch[1]);
 
     const pctMatch = lower.match(/(\d+)%/);
     if (pctMatch && !numMatch) {
-      // If percent is given without kwh, store as a flag (guardrails will handle)
-      directive_min_kwh = parseFloat(pctMatch[1]);
+      minimum_energy_kwh = parseFloat(pctMatch[1]);
     }
 
     return {
       note_index: index,
       applies: true,
       directive_type: 'minimum_battery_reserve',
-      structured_adjustment: { hours: validHours, directive_min_kwh },
-      explanation: `Minimum battery reserve raised to ${directive_min_kwh} kWh during window.`,
+      structured_adjustment: { hours: validHours, minimum_energy_kwh },
+      explanation: `Minimum battery reserve raised to ${minimum_energy_kwh} kWh during window.`,
     };
   }
 

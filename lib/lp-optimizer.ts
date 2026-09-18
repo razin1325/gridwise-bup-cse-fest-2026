@@ -34,7 +34,7 @@ export function solveEnergyOptimization(scenario: SanitizedScenario): Optimizati
           break;
         }
         case 'minimum_battery_reserve': {
-          const reqMin = (structured_adjustment as any).directive_min_kwh;
+          const reqMin = (structured_adjustment as any).minimum_energy_kwh ?? (structured_adjustment as any).directive_min_kwh;
           if (typeof reqMin === 'number') {
             activeMinBattery[h] = Math.max(activeMinBattery[h], reqMin);
           }

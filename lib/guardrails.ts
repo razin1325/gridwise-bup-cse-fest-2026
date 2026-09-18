@@ -139,8 +139,14 @@ export function sanitizeAndValidateScenario(
             break;
           }
           case 'minimum_battery_reserve': {
-            let directive_min_kwh = Math.max(0, Number(structured_adjustment.directive_min_kwh) || 0);
-            structured_adjustment = { hours: adjHours, directive_min_kwh };
+            let reqMin = Number(structured_adjustment.minimum_energy_kwh ?? structured_adjustment.directive_min_kwh);
+            if (isNaN(reqMin)) reqMin = 0;
+            // If expressed as a percentage <= 1 (e.g. 0.3 for 30%), or <= 100 percentage
+            if (reqMin > 0 && reqMin <= 1 && battery.capacity_kwh > 0) {
+              reqMin = reqMin * battery.capacity_kwh;
+            }
+            let minimum_energy_kwh = Math.max(0, Math.min(reqMin, battery.capacity_kwh));
+            structured_adjustment = { hours: adjHours, minimum_energy_kwh };
             break;
           }
           case 'no_charge_window': {
