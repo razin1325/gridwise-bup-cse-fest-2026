@@ -231,6 +231,7 @@ export default function ElectricityAnimation() {
 
   return (
     <div
+      className="hidden md:block"
       style={{
         position: 'fixed',
         top: 0,

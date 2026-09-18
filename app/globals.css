@@ -65,3 +65,10 @@ body::before {
   pointer-events: none;
   z-index: 0;
 }
+
+/* ─── Mobile responsiveness ─────────────────────── */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+}

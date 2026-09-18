@@ -129,22 +129,22 @@ export default function EnergyOptimizationDashboard() {
       <ElectricityAnimation />
       {/* Top Header */}
       <header className="border-b border-border bg-[#0d1322]/90 backdrop-blur sticky top-0 z-50 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-0 sm:h-16 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400">
-              <Zap className="w-6 h-6 animate-pulse" />
+            <div className="p-1.5 sm:p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400">
+              <Zap className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-50 tracking-wide flex items-center gap-2">
-                GridWise <span className="text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">BUP CSE FEST 2026</span>
+              <h1 className="text-base sm:text-lg font-bold text-slate-50 tracking-wide flex items-center gap-2">
+                GridWise <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">BUP CSE FEST 2026</span>
               </h1>
-              <p className="text-xs text-slate-400">LLM-Assisted Smart Campus Energy Cost Minimizer</p>
+              <p className="text-[10px] sm:text-xs text-slate-400">LLM-Assisted Smart Campus Energy Cost Minimizer</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 sm:space-x-4 w-full sm:w-auto justify-between sm:justify-end">
             <div className="flex items-center space-x-2 text-xs">
-              <span className="text-slate-400">API Health:</span>
+              <span className="text-slate-400 hidden sm:inline">API Health:</span>
               <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-medium ${
                 healthStatus === 'online' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400'
               }`}>
@@ -156,7 +156,7 @@ export default function EnergyOptimizationDashboard() {
             <button
               onClick={handleRunOptimization}
               disabled={loading}
-              className="flex items-center space-x-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-semibold px-4 py-2 rounded-lg shadow-lg shadow-cyan-500/20 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+              className="flex items-center space-x-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-semibold px-3 sm:px-4 py-2 rounded-lg shadow-lg shadow-cyan-500/20 transition-all active:scale-95 disabled:opacity-50 cursor-pointer text-sm"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>{loading ? 'Optimizing...' : 'Run Optimization'}</span>
@@ -165,16 +165,16 @@ export default function EnergyOptimizationDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6 relative z-10">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-4 sm:space-y-6 relative z-10">
         {/* Sample Case Card Selector */}
-        <div className="p-4 rounded-xl glass-card space-y-3">
-          <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
+        <div className="p-3 sm:p-4 rounded-xl glass-card space-y-3">
+          <div className="flex items-center space-x-2 text-xs sm:text-sm font-semibold text-slate-200">
             <Sliders className="w-4 h-4 text-cyan-400" />
             <span>Official Sample Test Cases <span className="text-xs font-normal text-slate-400 ml-1">(10 Public Cases)</span></span>
           </div>
 
           {/* 5×2 Card Grid */}
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
             {SAMPLE_CASES.map((c, idx) => {
               const isActive = selectedCaseId === c.id;
               return (
@@ -219,12 +219,12 @@ export default function EnergyOptimizationDashboard() {
           {/* Accordion Header */}
           <button
             onClick={() => setJsonOpen((o) => !o)}
-            className="w-full flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-white/[0.03] transition-colors"
+            className="w-full flex items-center justify-between px-3 sm:px-5 py-3 sm:py-4 cursor-pointer hover:bg-white/[0.03] transition-colors"
           >
-            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
+            <div className="flex items-center space-x-2 text-xs sm:text-sm font-semibold text-slate-200">
               <FileCode className="w-4 h-4 text-cyan-400" />
               <span>Scenario JSON Input</span>
-              <span className="text-xs font-mono text-slate-400 font-normal ml-1">POST /optimize-energy</span>
+              <span className="text-xs font-mono text-slate-400 font-normal ml-1 hidden sm:inline">POST /optimize-energy</span>
             </div>
             <ChevronDown
               className={`w-4 h-4 text-cyan-400 transition-transform duration-300 ${
@@ -235,11 +235,11 @@ export default function EnergyOptimizationDashboard() {
 
           {/* Collapsible Body */}
           {jsonOpen && (
-            <div className="px-5 pb-5 flex flex-col space-y-3 border-t border-white/[0.05]">
+            <div className="px-3 sm:px-5 pb-4 sm:pb-5 flex flex-col space-y-3 border-t border-white/[0.05]">
               <textarea
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
-                className="w-full h-64 bg-[#060a12] text-slate-200 font-mono text-xs p-4 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500/50 resize-none leading-relaxed mt-3"
+                className="w-full h-48 sm:h-64 bg-[#060a12] text-slate-200 font-mono text-[10px] sm:text-xs p-3 sm:p-4 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500/50 resize-none leading-relaxed mt-3"
                 placeholder="Paste scenario JSON payload..."
               />
               {errorMsg && (
@@ -254,7 +254,7 @@ export default function EnergyOptimizationDashboard() {
 
         {/* Ready Placeholder — shown only when no result yet */}
         {!result && (
-          <div className="glass-card p-8 flex flex-col items-center justify-center text-center space-y-3 text-slate-400">
+          <div className="glass-card p-6 sm:p-8 flex flex-col items-center justify-center text-center space-y-3 text-slate-400">
             <Sparkles className="w-8 h-8 text-cyan-400/60 animate-bounce" />
             <h3 className="text-sm font-semibold text-slate-200">Ready to Optimize Scenario</h3>
             <p className="text-xs max-w-sm text-slate-400">
@@ -269,7 +269,7 @@ export default function EnergyOptimizationDashboard() {
             {/* Left: Metric Cards + Reference Truth + Directives */}
             <div className="lg:col-span-6 flex flex-col space-y-4">
               {/* Metric Cards */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="glass-card-glow p-4 flex flex-col justify-between">
                   <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
                     <span>Total Cost</span>
@@ -306,7 +306,7 @@ export default function EnergyOptimizationDashboard() {
 
               {/* Reference Truth Match Card */}
               {currentCase?.expected_output && (
-                <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-300 flex items-center justify-between">
+                <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                   <div className="flex items-center space-x-2">
                     <Award className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>
@@ -321,7 +321,7 @@ export default function EnergyOptimizationDashboard() {
             </div>
 
             {/* Right: Directive Interpretations */}
-            <div className="lg:col-span-6 glass-card p-5 space-y-3">
+            <div className="lg:col-span-6 glass-card p-3 sm:p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
                   <Cpu className="w-4 h-4 text-cyan-400" />
@@ -383,16 +383,16 @@ export default function EnergyOptimizationDashboard() {
           <>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Energy Dispatch Breakdown */}
-              <div className="lg:col-span-7 glass-card p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
-                    <BarChart3 className="w-4 h-4 text-cyan-400" />
+              <div className="lg:col-span-7 glass-card p-3 sm:p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0">
+                  <div className="flex items-center space-x-2 text-xs sm:text-sm font-semibold text-slate-200">
+                    <BarChart3 className="w-4 h-4 text-cyan-400 shrink-0" />
                     <span>24-Hour Energy Dispatch (Grid, Solar, Battery)</span>
                   </div>
                   <span className="text-xs text-slate-400 font-mono">kWh vs Hour</span>
                 </div>
 
-                <div className="h-72 w-full">
+                <div className="h-56 sm:h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1f293d" />
@@ -412,16 +412,16 @@ export default function EnergyOptimizationDashboard() {
               </div>
 
               {/* Battery SOC & Trajectory */}
-              <div className="lg:col-span-5 glass-card p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
-                    <BatteryCharging className="w-4 h-4 text-emerald-400" />
+              <div className="lg:col-span-5 glass-card p-3 sm:p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0">
+                  <div className="flex items-center space-x-2 text-xs sm:text-sm font-semibold text-slate-200">
+                    <BatteryCharging className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>Battery State of Charge (SOC) Trajectory</span>
                   </div>
                   <span className="text-xs text-emerald-400 font-mono">End SOC = Initial SOC</span>
                 </div>
 
-                <div className="h-72 w-full">
+                <div className="h-56 sm:h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
@@ -444,10 +444,10 @@ export default function EnergyOptimizationDashboard() {
             </div>
 
             {/* 24-Hour Hourly Plan Table */}
-            <div className="glass-card p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
-                  <Layers className="w-4 h-4 text-cyan-400" />
+            <div className="glass-card p-3 sm:p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0">
+                <div className="flex items-center space-x-2 text-xs sm:text-sm font-semibold text-slate-200">
+                  <Layers className="w-4 h-4 text-cyan-400 shrink-0" />
                   <span>24-Hour Optimized Energy Schedule Table</span>
                 </div>
                 <span className="text-xs text-slate-400">24 Hourly Intervals (0..23)</span>
